@@ -1,5 +1,11 @@
 # 24時間以内の新着動画リンクを自動取得する対象チャンネル
+#
+# title_filter を指定すると、そのチャンネルはタイトルに指定文字列を
+# 含む動画だけを対象にする(未指定なら全件対象)
 
 channels:
   - name: "テレ東BIZ ダイジェスト"
     channel_id: "UCkKVQ_GNjd8FbAuT6xDcWgg"
+  - name: "日経CNBC"
+    channel_id: "UClVsQnfs-jKkjKmUKUHnT2g"
+    title_filter: "東京株式市場"
