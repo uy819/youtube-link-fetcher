@@ -3,10 +3,15 @@ config/channels.yaml のチャンネルRSS(無料・無認証)を確認し、
 公開から24時間以内の新着動画を state/seen_videos.json と突き合わせて
 未処理分だけ抽出、GitHub Issue用のMarkdown本文を issue_body.md に書き出す。
 
+RSSフィード自体にはライブ配信かどうかの情報が含まれないため、
+候補動画ごとに yt-dlp でメタデータを取得し、通常の動画
+(live_status == "not_live")だけを残す。ライブ配信中・配信予定・
+配信アーカイブ(was_live)は除外する。
+
 Obsidianやvaultへの書き込みは一切行わない。GitHub Actions単体で完結する。
 
 前提:
-  pip install feedparser pyyaml
+  pip install feedparser pyyaml yt-dlp
 
 実行:
   python scripts/fetch_recent_links.py
@@ -20,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 
 import feedparser
 import yaml
+from yt_dlp import YoutubeDL
 
 CONFIG_PATH = "config/channels.yaml"
 STATE_DIR = "state"
@@ -54,6 +60,20 @@ def is_within_window(entry, hours: int) -> bool:
     return datetime.now(timezone.utc) - published <= timedelta(hours=hours)
 
 
+def is_regular_video(url: str) -> bool:
+    """ライブ配信・配信予定・配信アーカイブを除外し、通常動画のみ通す。"""
+    opts = {"quiet": True, "skip_download": True, "no_warnings": True}
+    try:
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        # live_status: "is_live" | "is_upcoming" | "was_live" | "post_live" | "not_live" | None
+        live_status = info.get("live_status")
+        return live_status in (None, "not_live")
+    except Exception as e:
+        print(f"メタデータ取得失敗、除外扱いにします: {url} ({e})")
+        return False
+
+
 def main() -> None:
     config = load_config()
     seen = load_seen()
@@ -69,12 +89,19 @@ def main() -> None:
                 continue
             if not is_within_window(entry, HOURS_WINDOW):
                 continue
+
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            seen.add(video_id)  # ライブ判定に関わらず既知として記録し、再チェックを避ける
+
+            if not is_regular_video(video_url):
+                print(f"ライブ系のため除外: {entry.title}")
+                continue
+
             new_entries.append({
                 "channel": channel["name"],
                 "title": entry.title,
-                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "url": video_url,
             })
-            seen.add(video_id)
 
     save_seen(seen)
 
