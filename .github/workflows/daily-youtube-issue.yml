@@ -32,9 +32,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
-            --title "YouTube新着リンク $(date +%Y-%m-%d)" \
-            --body-file issue_body.md \
-            --label "youtube-digest"
+           --title "YouTube新着リンク $(date +%Y-%m-%d)" \
+           --body-file issue_body.md
 
       - name: Commit state
         run: |
