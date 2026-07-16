@@ -1,0 +1,5 @@
+# 24時間以内の新着動画リンクを自動取得する対象チャンネル
+
+channels:
+  - name: "テレ東BIZ ダイジェスト"
+    channel_id: "UCkKVQ_GNjd8FbAuT6xDcWgg"

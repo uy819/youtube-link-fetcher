@@ -1,0 +1,45 @@
+name: Daily YouTube Links to Issue
+
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 毎日 21:00 UTC = 翌6:00 JST
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  fetch-and-post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.4"
+
+      - name: Install dependencies
+        run: pip install feedparser pyyaml
+
+      - name: Fetch recent video links
+        id: fetch
+        run: python scripts/fetch_recent_links.py
+
+      - name: Create GitHub Issue
+        if: steps.fetch.outputs.has_new == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "YouTube新着リンク $(date +%Y-%m-%d)" \
+            --body-file issue_body.md \
+            --label "youtube-digest"
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/
+          git diff --staged --quiet || git commit -m "Update seen videos $(date +%Y-%m-%d)"
+          git push
