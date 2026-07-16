@@ -91,6 +91,12 @@ def main() -> None:
                 continue
 
             video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+            title_filter = channel.get("title_filter")
+            if title_filter and title_filter not in entry.title:
+                seen.add(video_id)  # 対象外は次回以降も再チェックしない
+                continue
+
             seen.add(video_id)  # ライブ判定に関わらず既知として記録し、再チェックを避ける
 
             if not is_regular_video(video_url):
@@ -117,6 +123,13 @@ def main() -> None:
     lines = [f"## {datetime.now().strftime('%Y-%m-%d %H:%M')} 時点の新着動画({HOURS_WINDOW}時間以内)", ""]
     for e in new_entries:
         lines.append(f"- [ ] [{e['title']}]({e['url']}) — {e['channel']}")
+
+    lines.append("")
+    lines.append("### コピー用URLリスト")
+    lines.append("```text")
+    for e in new_entries:
+        lines.append(e["url"])
+    lines.append("```")
 
     with open(ISSUE_BODY_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
