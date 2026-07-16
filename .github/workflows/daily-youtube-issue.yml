@@ -20,7 +20,7 @@ jobs:
           python-version: "3.10.4"
 
       - name: Install dependencies
-        run: pip install feedparser pyyaml
+        run: pip install feedparser pyyaml yt-dlp
 
       - name: Fetch recent video links
         id: fetch
@@ -32,8 +32,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
-           --title "YouTube新着リンク $(date +%Y-%m-%d)" \
-           --body-file issue_body.md
+            --title "YouTube新着リンク $(date +%Y-%m-%d)" \
+            --body-file issue_body.md
 
       - name: Commit state
         run: |
