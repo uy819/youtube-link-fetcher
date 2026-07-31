@@ -20,11 +20,14 @@ jobs:
           python-version: "3.10.4"
 
       - name: Install dependencies
-        run: pip install feedparser pyyaml
+        run: pip install feedparser pyyaml youtube-transcript-api requests
 
       - name: Fetch recent video links
         id: fetch
-        run: python scripts/fetch_recent_links.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        working-directory: scripts
+        run: python fetch_recent_links.py
 
       - name: Create GitHub Issue
         if: steps.fetch.outputs.has_new == 'true'
@@ -33,7 +36,7 @@ jobs:
         run: |
           gh issue create \
             --title "YouTube新着リンク $(date +%Y-%m-%d)" \
-            --body-file issue_body.md
+            --body-file scripts/issue_body.md
 
       - name: Commit state
         run: |
