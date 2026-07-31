@@ -1,2 +1,4 @@
 feedparser
 pyyaml
+youtube-transcript-api
+requests
