@@ -3,10 +3,13 @@ config/channels.yaml のチャンネルRSS(無料・無認証)を確認し、
 公開から24時間以内の新着動画を state/seen_videos.json と突き合わせて
 未処理分だけ抽出、GitHub Issue用のMarkdown本文を issue_body.md に書き出す。
 
+新着動画は scripts/summarize.py で字幕取得→Claude API要約まで行い、
+成功すればIssue本文に要約を埋め込む(失敗時はタイトル・URLのみで続行)。
+
 Obsidianやvaultへの書き込みは一切行わない。GitHub Actions単体で完結する。
 
 前提:
-  pip install feedparser pyyaml
+  pip install feedparser pyyaml youtube-transcript-api requests
 
 実行:
   python scripts/fetch_recent_links.py
@@ -20,6 +23,8 @@ from datetime import datetime, timedelta, timezone
 
 import feedparser
 import yaml
+
+from summarize import summarize_video
 
 CONFIG_PATH = "config/channels.yaml"
 STATE_DIR = "state"
@@ -79,10 +84,13 @@ def main() -> None:
 
             seen.add(video_id)
 
+            summary = summarize_video(video_id, entry.title)
+
             new_entries.append({
                 "channel": channel["name"],
                 "title": entry.title,
                 "url": video_url,
+                "summary": summary,
             })
 
     save_seen(seen)
@@ -99,8 +107,14 @@ def main() -> None:
     lines = [f"## {datetime.now().strftime('%Y-%m-%d %H:%M')} 時点の新着動画({HOURS_WINDOW}時間以内)", ""]
     for e in new_entries:
         lines.append(f"- [ ] [{e['title']}]({e['url']}) — {e['channel']}")
+        if e["summary"]:
+            for sline in e["summary"].splitlines():
+                if sline.strip():
+                    lines.append(f"  {sline.strip()}")
+        else:
+            lines.append("  (要約なし: 字幕未取得またはAPIエラー)")
+        lines.append("")
 
-    lines.append("")
     lines.append("### コピー用URLリスト")
     lines.append("```text")
     for e in new_entries:
